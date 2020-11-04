@@ -1,0 +1,9 @@
+/[Oo]ut
+/[Bb]uild
+/CMakeSettings.json
+/data
+/data/**
+/.vs
+/.vs/**
+/.vscode
+/.vscode/**
