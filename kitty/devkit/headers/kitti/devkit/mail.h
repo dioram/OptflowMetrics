@@ -10,17 +10,9 @@
 #ifndef popen
 #define popen(_Command, _Mode) _popen(cmd,"w")
 #endif
-#else
-#ifndef popen
-#define popen(_Command, _Mode) _popen(_Command,_Mode)
-#endif
 #endif
 
 #ifdef WIN32
-#ifndef pclose
-#define pclose(_Stream) _pclose(_Stream)
-#endif
-#else
 #ifndef pclose
 #define pclose(_Stream) _pclose(_Stream)
 #endif
