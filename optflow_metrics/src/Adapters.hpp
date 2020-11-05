@@ -13,11 +13,14 @@ public:
                 pts.at<cv::Point2f>(i, j) = cv::Point2f(j, i);
             }
         }
-        pts = pts.reshape(2, pts.total());
-        cv::Mat nextPts;
-        std::vector<uchar> statuses;
+        pts = pts.reshape(2, 1);
+        cv::Mat nextPts(pts.clone());
+        cv::Mat statuses;
         _sparse->calc(I0, I1, pts, nextPts, statuses, cv::noArray());
-        flow.getMatRef() = nextPts.reshape(2, I0.rows());
+        statuses = statuses.reshape(1, I0.rows());
+        nextPts = cv::Mat(pts - nextPts).reshape(2, I0.rows());
+        cv::Mat _flow; cv::bitwise_and(nextPts, nextPts, _flow, statuses);
+        flow.getMatRef() = _flow;
     }
     /** @brief Releases all inner buffers.
     */
@@ -29,7 +32,7 @@ private:
     cv::Ptr<cv::SparseOpticalFlow> _sparse;
 };
 
-class CudaDense2DenseAdapter : cv::DenseOpticalFlow {
+class CudaDense2DenseAdapter : public cv::DenseOpticalFlow {
 public:
     CudaDense2DenseAdapter(const cv::Ptr<cv::cuda::DenseOpticalFlow>& cudaDense) : _cudaDense(cudaDense) { }
 
@@ -47,7 +50,7 @@ private:
     cv::Ptr<cv::cuda::DenseOpticalFlow> _cudaDense;
 };
 
-class CudaSparse2DenseAdapter : cv::DenseOpticalFlow {
+class CudaSparse2DenseAdapter : public cv::DenseOpticalFlow {
 public:
     CudaSparse2DenseAdapter(const cv::Ptr<cv::cuda::SparseOpticalFlow>& sparse) : _sparse(sparse) { }
 
@@ -58,11 +61,15 @@ public:
                 pts.at<cv::Point2f>(i, j) = cv::Point2f(j, i);
             }
         }
-        pts = pts.reshape(2, pts.total());
-        cv::cuda::GpuMat gpuPts(pts), gpuNextPts, gpuStatuses;
+        pts = pts.reshape(2, 1);
+        cv::cuda::GpuMat gpuPts(pts), gpuNextPts(pts), gpuStatuses;
         _sparse->calc(cv::cuda::GpuMat(I0), cv::cuda::GpuMat(I1), gpuPts, gpuNextPts, gpuStatuses);
         cv::Mat nextPts; gpuNextPts.download(nextPts);
-        flow.getMatRef() = nextPts.reshape(2, I0.rows());
+        cv::Mat statuses; gpuStatuses.download(statuses);
+        statuses = statuses.reshape(1, I0.rows());
+        nextPts = cv::Mat(pts - nextPts).reshape(2, I0.rows());
+        cv::Mat _flow; cv::bitwise_and(nextPts, nextPts, _flow, statuses);
+        flow.getMatRef() = _flow;
     }
     /** @brief Releases all inner buffers.
     */

@@ -16,6 +16,23 @@ float calcMetric(cv::Mat predicted, cv::Mat label) {
     return metric;
 }
 
+template<typename T>
+T clamp(const T& value, const T& _min, const T& _max) {
+    return std::max(std::min(value, _max), _min);
+}
+
+cv::Mat drawMotion(const cv::Mat& img, const cv::Mat& motion) {
+    cv::Mat res(img.size(), img.type());
+    for (int i = 0; i < img.rows; ++i) {
+        for (int j = 0; j < img.cols; ++j) {
+            const cv::Point2f& motionVec = motion.at<cv::Point2f>(i, j);
+            cv::Point2i c = { clamp((int)round(motionVec.x + i), 0, img.rows - 1), clamp((int)round(motionVec.y + j), 0, img.cols - 1) };
+            res.at<cv::Point3_<uchar>>(i, j) = img.at<cv::Point3_<uchar>>(c.x, c.y);
+        }
+    }
+    return res;
+}
+
 std::tuple<double, double> calcMetrics(const cv::Ptr<cv::DenseOpticalFlow>& optflow, const IReaderPtr& reader, void (*logger)(int, double) = NULL) {
     cv::Mat prev, next, gt, gt_status;
     std::vector<double> errs;
@@ -23,6 +40,7 @@ std::tuple<double, double> calcMetrics(const cv::Ptr<cv::DenseOpticalFlow>& optf
     while (reader->read_next(prev, next, gt, gt_status)) {
         cv::Mat flow;
         optflow->calc(prev, next, flow);
+        //cv::Mat temp = drawMotion(prev, flow);
         double err = calcMetric(flow, gt);
         if (logger != NULL) {
             logger(iter++, err);
@@ -37,6 +55,11 @@ std::tuple<double, double> calcMetrics(const cv::Ptr<cv::DenseOpticalFlow>& optf
 cv::Ptr<cv::DenseOpticalFlow> make_pyrLK() {
     auto opticalFlow = cv::SparsePyrLKOpticalFlow::create({ 21, 21, }, 3, cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, .01), 0, 10e-4);
     return cv::makePtr<Sparse2DenseAdapter>(opticalFlow);
+}
+
+cv::Ptr<cv::DenseOpticalFlow> make_cudaPyrLK() {
+    auto opticalFlow = cv::cuda::SparsePyrLKOpticalFlow::create({ 21, 21, }, 3, 30, false);
+    return cv::makePtr<CudaSparse2DenseAdapter>(opticalFlow);
 }
 
 cv::Ptr<cv::DenseOpticalFlow> make_RLOF() {
@@ -72,15 +95,19 @@ int main(int argc, char* argv[]) {
         std::cerr << "unknown dataset type \"" << argv[2] << "\"" << std::endl;
         return -2;
     }
-    std::vector<cv::Ptr<cv::DenseOpticalFlow>> opt_flows = {
-        make_pyrLK(),
-        make_RLOF(),
+    std::vector<std::tuple<const char*, cv::Ptr<cv::DenseOpticalFlow>>> opt_flows = {
+        std::make_tuple("pyrLK", make_pyrLK()),
+        std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
+        std::make_tuple("denseRLOF", make_RLOF()),
     };
-    for (const auto& opt_flow : opt_flows) {
+    for (const auto& opt_flow_info : opt_flows) {
         double mean, stdDev;
+        const char* name; cv::Ptr<cv::DenseOpticalFlow> opt_flow;
+        std::tie(name, opt_flow) = opt_flow_info;
+        std::printf("Optical flow algorithm: %s\n", name);
         std::tie(mean, stdDev) = calcMetrics(opt_flow, reader, [](int i, double err) {
             std::printf("%d. %.5f\n", i, err);
-            });
+        });
         std::printf("mean: %f, std_dev: %f\n", mean, stdDev);
     }
     return 0;

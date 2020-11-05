@@ -10,7 +10,7 @@ std::tuple<cv::Mat, cv::Mat> readKittiFlow(const std::string& filename) {
     std::vector<cv::Mat> channels;
     cv::split(_img, channels);
     cv::merge(std::vector<cv::Mat>{ channels[0], channels[1] }, _img);
-    _img = _img / 255.f;
+    //_img = _img / 255.f;
     return std::make_tuple(_img, channels[2]);
 }
 
