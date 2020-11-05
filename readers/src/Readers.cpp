@@ -1,11 +1,11 @@
 #include <readers/Readers.h>
-#include "CintelReader.h"
+#include "SintelReader.h"
 #include "KittiReader.h"
 
 IReaderPtr Readers::makeKittiReader(const std::string& dir) {
 	return std::make_shared<KittyReader>(dir);
 }
 
-IReaderPtr Readers::makeCintelReader(const std::string& dir) {
-	throw std::runtime_error("not implemented");
+IReaderPtr Readers::makeSintelReader(const std::string& dir, const std::string& subfolder, RenderingType type ) {
+	return std::make_shared<SintelReader>(dir, subfolder, type);
 }

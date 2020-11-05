@@ -81,15 +81,25 @@ cv::Ptr<cv::DenseOpticalFlow> make_RLOF() {
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
-        std::cerr << "usage: <path_to_dataset> <kitti|cintel>" << std::endl;
+        std::cerr << "usage: <path_to_dataset> <kitti|sintel> If sintel, you must also provide subfolder "
+                     "(i.e. market_2, alley_1, ambush_2 etc. And rendering type - 0 for albedo, 1 for clean or 2 for final"
+                     << std::endl;
         return -1;
     }
     IReaderPtr reader = nullptr;
     if (!strcmp(argv[2], "kitti")) {
         reader = Readers::makeKittiReader(argv[1]);
     }
-    else if (!strcmp(argv[2], "cintel")) {
-        reader = Readers::makeCintelReader(argv[1]);
+    else if (!strcmp(argv[2], "sintel")) {
+        if (argc < 5) {
+            std::cerr << "If sintel, you must also provide subfolder "
+                         "(i.e. market_2, alley_1, ambush_2 etc. And rendering type - 0 for albedo, 1 for clean or 2 for final"
+                      << std::endl;
+            return -1;
+        }
+        int r_t = atoi(argv[4]);
+        RenderingType type(static_cast<RenderingType>(r_t));
+        reader = Readers::makeSintelReader(argv[1], argv[3], type);
     }
     else {
         std::cerr << "unknown dataset type \"" << argv[2] << "\"" << std::endl;
