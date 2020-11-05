@@ -3,9 +3,9 @@ project(readers)
 set(${PROJECT_NAME}_TARGET_NAME ${PROJECT_NAME})
 
 set(SOURCE_FILES
-	src/CintelReader.h src/CintelReader.cpp
+		src/SintelReader.h src/SintelReader.cpp
 	src/KittiReader.h src/KittiReader.cpp
-	src/Readers.cpp)
+	src/Readers.cpp headers/readers/RenderingType.h)
 add_library(${${PROJECT_NAME}_TARGET_NAME} ${SOURCE_FILES})
 target_include_directories(${${PROJECT_NAME}_TARGET_NAME}
 	PUBLIC
