@@ -1,6 +1,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/optflow.hpp>
 #include <readers/Readers.h>
+#include "Adapters.hpp"
 
 float calcMetric(cv::Mat predicted, cv::Mat label) {
     cv::Mat diff = predicted - label;
@@ -29,9 +30,30 @@ std::tuple<double, double> calcMetrics(const cv::Ptr<cv::DenseOpticalFlow>& optf
         errs.push_back(err);
     }
     reader->reset();
-    cv::Scalar mean, stdDev;
-    cv::meanStdDev(errs, mean, stdDev);
+    cv::Scalar mean, stdDev; cv::meanStdDev(errs, mean, stdDev);
     return std::make_tuple(mean[0], stdDev[0]);
+}
+
+cv::Ptr<cv::DenseOpticalFlow> make_pyrLK() {
+    auto opticalFlow = cv::SparsePyrLKOpticalFlow::create({ 21, 21, }, 3, cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, .01), 0, 10e-4);
+    return cv::makePtr<Sparse2DenseAdapter>(opticalFlow);
+}
+
+cv::Ptr<cv::DenseOpticalFlow> make_RLOF() {
+    auto param = cv::optflow::RLOFOpticalFlowParameter::create();
+    param->setUseIlluminationModel(true);
+    param->setSolverType(cv::optflow::ST_BILINEAR);
+    param->setNormSigma0(3.2);
+    param->setNormSigma1(7.0);
+    param->setMaxLevel(3);
+    param->setMaxIteration(30);
+    param->setMinEigenValue(1e-4);
+    param->setSmallWinSize(9);
+    param->setLargeWinSize(21);
+    param->setCrossSegmentationThreshold(10);
+    param->setUseGlobalMotionPrior(false);
+    auto opticalFlow = cv::optflow::DenseRLOFOpticalFlow::create(param);
+    return opticalFlow;
 }
 
 int main(int argc, char* argv[]) {
@@ -50,11 +72,16 @@ int main(int argc, char* argv[]) {
         std::cerr << "unknown dataset type \"" << argv[2] << "\"" << std::endl;
         return -2;
     }
-    auto optflow = cv::optflow::DenseRLOFOpticalFlow::create();
-    double mean, stdDev;
-    std::tie(mean, stdDev) = calcMetrics(optflow, reader, [](int i, double err) {
-        std::printf("%d. %.5f\n", i, err);
-    });
-    std::printf("mean: %f, std_dev: %f\n", mean, stdDev);
+    std::vector<cv::Ptr<cv::DenseOpticalFlow>> opt_flows = {
+        make_pyrLK(),
+        make_RLOF(),
+    };
+    for (const auto& opt_flow : opt_flows) {
+        double mean, stdDev;
+        std::tie(mean, stdDev) = calcMetrics(opt_flow, reader, [](int i, double err) {
+            std::printf("%d. %.5f\n", i, err);
+            });
+        std::printf("mean: %f, std_dev: %f\n", mean, stdDev);
+    }
     return 0;
 }

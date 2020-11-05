@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 project(optflow_metrics)
 set(${PROJECT_NAME}_TARGET_NAME ${PROJECT_NAME})
 
-set(SOURCE_FILES src/main.cpp)
+set(SOURCE_FILES src/main.cpp src/Adapters.hpp)
 
 add_executable(${${PROJECT_NAME}_TARGET_NAME} ${SOURCE_FILES})
 target_include_directories(${${PROJECT_NAME}_TARGET_NAME}
