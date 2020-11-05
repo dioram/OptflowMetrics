@@ -34,25 +34,16 @@ bool KittyReader::read_current(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Ma
     prev = cv::imread(img);
     std::sprintf(img, "%s/training/image_2/%06d_11.png", _dir.c_str(), _currIdx);
     next = cv::imread(img);
-    if (prev.empty() || next.empty()) {
-        return false;
-    }
-    return true;
+    return !prev.empty() && !next.empty();
 }
 
 bool KittyReader::read_next(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& gt_status) {
     ++_currIdx;
-    if (read_current(prev, next, gt, gt_status)) {
-        return true;
-    }
-    return false;
+    return read_current(prev, next, gt, gt_status);
 }
 bool KittyReader::read_prev(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& status) {
     --_currIdx;
-    if (_currIdx != -1 && read_current(prev, next, gt, status)) {
-        return true;
-    }
-    return false;
+    return _currIdx != -1 && read_current(prev, next, gt, status);
 }
 void KittyReader::reset() {
     _currIdx = -1;

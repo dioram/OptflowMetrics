@@ -55,6 +55,6 @@ int main(int argc, char* argv[]) {
     std::tie(mean, stdDev) = calcMetrics(optflow, reader, [](int i, double err) {
         std::printf("%d. %.5f\n", i, err);
     });
-    std::printf("mean: %f, std_dev: %f", mean, stdDev);
+    std::printf("mean: %f, std_dev: %f\n", mean, stdDev);
     return 0;
 }
