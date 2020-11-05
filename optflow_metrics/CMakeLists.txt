@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(OpticalFlowKITTY)
+project(optflow_metrics)
 set(${PROJECT_NAME}_TARGET_NAME ${PROJECT_NAME})
 
 set(SOURCE_FILES src/main.cpp)
@@ -13,4 +13,4 @@ find_package(OpenCV REQUIRED)
 target_include_directories(${${PROJECT_NAME}_TARGET_NAME} PRIVATE ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(${${PROJECT_NAME}_TARGET_NAME} PRIVATE ${OpenCV_LIBRARIES})
 
-target_link_libraries(${${PROJECT_NAME}_TARGET_NAME} PRIVATE KittiDevkit)
+target_link_libraries(${${PROJECT_NAME}_TARGET_NAME} PRIVATE readers)
