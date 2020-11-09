@@ -16,9 +16,10 @@ public:
         pts = pts.reshape(2, 1);
         cv::Mat nextPts(pts.clone());
         cv::Mat statuses;
-        _sparse->calc(I0, I1, pts, nextPts, statuses, cv::noArray());
+        cv::Mat err;
+        _sparse->calc(I0, I1, pts, nextPts, statuses, err);
         statuses = statuses.reshape(1, I0.rows());
-        nextPts = cv::Mat(pts - nextPts).reshape(2, I0.rows());
+        nextPts = cv::Mat(nextPts - pts).reshape(2, I0.rows());
         cv::Mat _flow; cv::bitwise_and(nextPts, nextPts, _flow, statuses);
         flow.getMatRef() = _flow;
     }
@@ -67,7 +68,7 @@ public:
         cv::Mat nextPts; gpuNextPts.download(nextPts);
         cv::Mat statuses; gpuStatuses.download(statuses);
         statuses = statuses.reshape(1, I0.rows());
-        nextPts = cv::Mat(pts - nextPts).reshape(2, I0.rows());
+        nextPts = cv::Mat(nextPts - pts).reshape(2, I0.rows());
         cv::Mat _flow; cv::bitwise_and(nextPts, nextPts, _flow, statuses);
         flow.getMatRef() = _flow;
     }

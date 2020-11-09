@@ -21,15 +21,21 @@ T clamp(const T& value, const T& _min, const T& _max) {
     return std::max(std::min(value, _max), _min);
 }
 
-cv::Mat drawMotion(const cv::Mat& img, const cv::Mat& motion) {
-    cv::Mat res(img.size(), img.type());
-    for (int i = 0; i < img.rows; ++i) {
-        for (int j = 0; j < img.cols; ++j) {
-            const cv::Point2f& motionVec = motion.at<cv::Point2f>(i, j);
-            cv::Point2i c = { clamp((int)round(motionVec.x + i), 0, img.rows - 1), clamp((int)round(motionVec.y + j), 0, img.cols - 1) };
-            res.at<cv::Point3_<uchar>>(i, j) = img.at<cv::Point3_<uchar>>(c.x, c.y);
+cv::Mat makeCoordMat(int rows, int cols) {
+    cv::Mat res(rows, cols, CV_32FC2);
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            res.at<cv::Point2f>(i, j) = cv::Point2f(j, i);
         }
     }
+    return res;
+}
+
+cv::Mat drawMotion(const cv::Mat& img, const cv::Mat& motion) {
+    cv::Mat res(img.size(), img.type());
+    cv::Mat coords = makeCoordMat(img.rows, img.cols);
+    coords -= motion;
+    cv::remap(img, res, coords, cv::noArray(), cv::INTER_LINEAR);
     return res;
 }
 
@@ -107,8 +113,8 @@ int main(int argc, char* argv[]) {
     }
     std::vector<std::tuple<const char*, cv::Ptr<cv::DenseOpticalFlow>>> opt_flows = {
         std::make_tuple("pyrLK", make_pyrLK()),
-        std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
-        std::make_tuple("denseRLOF", make_RLOF()),
+        //std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
+        //std::make_tuple("denseRLOF", make_RLOF()),
     };
     for (const auto& opt_flow_info : opt_flows) {
         double mean, stdDev;
