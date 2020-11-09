@@ -116,15 +116,27 @@ int main(int argc, char* argv[]) {
         //std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
         //std::make_tuple("denseRLOF", make_RLOF()),
     };
-    for (const auto& opt_flow_info : opt_flows) {
-        double mean, stdDev;
-        const char* name; cv::Ptr<cv::DenseOpticalFlow> opt_flow;
-        std::tie(name, opt_flow) = opt_flow_info;
-        std::printf("Optical flow algorithm: %s\n", name);
-        std::tie(mean, stdDev) = calcMetrics(opt_flow, reader, [](int i, double err) {
-            std::printf("%d. %.5f\n", i, err);
-        });
-        std::printf("mean: %f, std_dev: %f\n", mean, stdDev);
+    {
+#include <fstream>
+        std::ofstream output;
+        if (!strcmp(argv[2], "kitti"))
+            output.open("testing_"+std::string(argv[2])+".txt");
+        else if (!strcmp(argv[2], "sintel"))
+            output.open("testing_"+std::string(argv[2])+"_"+std::string(argv[3])+"_"+std::string(argv[4])+".txt", std::ios_base::app);
+        for (const auto &opt_flow_info : opt_flows) {
+            double mean, stdDev;
+            const char *name;
+            cv::Ptr<cv::DenseOpticalFlow> opt_flow;
+            std::tie(name, opt_flow) = opt_flow_info;
+            std::printf("Optical flow algorithm: %s\n", name);
+            output << "Optical flow algorithm: " << name << std::endl;
+            std::tie(mean, stdDev) = calcMetrics(opt_flow, reader, [](int i, double err) {
+//            std::printf("%d. %.5f\n", i, err);
+            });
+            std::printf("mean: %f, std_dev: %f\n", mean, stdDev);
+            output << "mean: " << mean << " std_dev: " << stdDev << std::endl;
+        }
+        output.close();
     }
     return 0;
 }
