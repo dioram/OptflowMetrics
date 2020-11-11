@@ -1,5 +1,6 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/optflow.hpp>
+#include <opencv2/cudaoptflow.hpp>
 #include <readers/Readers.h>
 #include "Adapters.hpp"
 #include "NvOptFlow20.h"
@@ -86,6 +87,11 @@ cv::Ptr<cv::DenseOpticalFlow> make_RLOF() {
     return opticalFlow;
 }
 
+cv::Ptr<cv::DenseOpticalFlow> make_NVFlow(int height, int width) {
+    auto opticalFlow = cv::cuda::NvidiaOpticalFlow_1_0::create(width, height);
+    return cv::makePtr<CudaNVFlowAdapter>(opticalFlow);
+}
+
 cv::Ptr<cv::DenseOpticalFlow> makeNvOptFlow_2_0(const cv::Size& sz, const bool& colored = true) {
     return NvOptFlow20::create(sz, colored);
 }
@@ -116,8 +122,11 @@ int main(int argc, char* argv[]) {
         std::cerr << "unknown dataset type \"" << argv[2] << "\"" << std::endl;
         return -2;
     }
+    cv::Mat prev, next, temp_gt, temp_status;
+    reader->read_next(prev, next, temp_gt, temp_status);
     std::vector<std::tuple<const char*, cv::Ptr<cv::DenseOpticalFlow>>> opt_flows = {
         std::make_tuple("NvOptFlow", makeNvOptFlow_2_0(cv::Size(1242, 375))),
+        std::make_tuple("NVFlow_1.0", make_NVFlow(prev.rows, prev.cols)), ///only available since RTX 20xx
         std::make_tuple("pyrLK", make_pyrLK()),
         std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
         std::make_tuple("denseRLOF", make_RLOF()),
