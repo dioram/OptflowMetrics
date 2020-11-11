@@ -10,4 +10,6 @@
 !/Common/NvOFBase/source_files.cmake
 !/Common/Utils/source_files.cmake
 !/Common/FreeImage/CMakeLists.txt
+!/NvOFInterface
+!/NvOFInterface/CMakeLists.txt
 !.gitignore
