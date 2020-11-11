@@ -1,0 +1,11 @@
+*
+!/CMakeLists.txt
+!/Common
+!/Common/CMakeLists.txt
+!/Common/NvOFBase
+!/Common/Utils
+!/Common/FreeImage
+!/Common/NvOFBase/source_files.cmake
+!/Common/Utils/source_files.cmake
+!/Common/FreeImage/CMakeLists.txt
+!.gitignore

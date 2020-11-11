@@ -2,6 +2,7 @@
 #include <opencv2/optflow.hpp>
 #include <readers/Readers.h>
 #include "Adapters.hpp"
+#include "NvOptFlow20.h"
 
 float calcMetric(cv::Mat predicted, cv::Mat label) {
     cv::Mat diff = predicted - label;
@@ -85,6 +86,10 @@ cv::Ptr<cv::DenseOpticalFlow> make_RLOF() {
     return opticalFlow;
 }
 
+cv::Ptr<cv::DenseOpticalFlow> makeNvOptFlow_2_0(const cv::Size& sz, const bool& colored = true) {
+    return NvOptFlow20::create(sz, colored);
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         std::cerr << "usage: <path_to_dataset> <kitti|sintel> If sintel, you must also provide subfolder "
@@ -112,9 +117,10 @@ int main(int argc, char* argv[]) {
         return -2;
     }
     std::vector<std::tuple<const char*, cv::Ptr<cv::DenseOpticalFlow>>> opt_flows = {
+        std::make_tuple("NvOptFlow", makeNvOptFlow_2_0(cv::Size(1242, 375))),
         std::make_tuple("pyrLK", make_pyrLK()),
-        //std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
-        //std::make_tuple("denseRLOF", make_RLOF()),
+        std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
+        std::make_tuple("denseRLOF", make_RLOF()),
     };
     {
 #include <fstream>
@@ -131,7 +137,7 @@ int main(int argc, char* argv[]) {
             std::printf("Optical flow algorithm: %s\n", name);
             output << "Optical flow algorithm: " << name << std::endl;
             std::tie(mean, stdDev) = calcMetrics(opt_flow, reader, [](int i, double err) {
-//            std::printf("%d. %.5f\n", i, err);
+            std::printf("%d. %.5f\n", i, err);
             });
             std::printf("mean: %f, std_dev: %f\n", mean, stdDev);
             output << "mean: " << mean << " std_dev: " << stdDev << std::endl;
