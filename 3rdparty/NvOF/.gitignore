@@ -4,7 +4,9 @@
 !/Common/CMakeLists.txt
 !/Common/NvOFBase
 !/Common/Utils
-!/Common/FreeImage
+!/Common/External/
+!/Common/External/FreeImage
+!/Common/External/FreeImage/CMakeLists.txt
 !/Common/NvOFBase/source_files.cmake
 !/Common/Utils/source_files.cmake
 !/Common/FreeImage/CMakeLists.txt

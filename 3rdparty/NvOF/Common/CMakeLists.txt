@@ -24,7 +24,7 @@ endif()
 #message("cuda lib: ${CUDA_CUDA_LIBRARY}")
 #message("cuda include: ${CUDA_INCLUDE_DIRS}")
 
-add_subdirectory(FreeImage)
+add_subdirectory(External/FreeImage)
 get_target_property(TEMP FreeImage INTERFACE_INCLUDE_DIRECTORIES)
 target_link_libraries(${${PROJECT_NAME}_TARGET_NAME} PUBLIC FreeImage NvOFInterface)
 

@@ -12,8 +12,8 @@ if (WIN32)
     endif()
 
     set_target_properties(FreeImage PROPERTIES
-        IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/build/${ARCH}/FreeImage.dll"
-        IMPORTED_IMPLIB "${CMAKE_CURRENT_SOURCE_DIR}/build/${ARCH}/FreeImage.lib"
-        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/headers")
+        IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/${ARCH}/FreeImage.dll"
+        IMPORTED_IMPLIB "${CMAKE_CURRENT_SOURCE_DIR}/${ARCH}/FreeImage.lib"
+        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}")
 
 endif()
