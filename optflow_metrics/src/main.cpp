@@ -87,13 +87,13 @@ cv::Ptr<cv::DenseOpticalFlow> make_RLOF() {
     return opticalFlow;
 }
 
-cv::Ptr<cv::DenseOpticalFlow> make_NVFlow(int height, int width) {
+cv::Ptr<cv::DenseOpticalFlow> make_NVFlow( int width, int height) {
     auto opticalFlow = cv::cuda::NvidiaOpticalFlow_1_0::create(width, height);
-    return cv::makePtr<CudaNVFlowAdapter>(opticalFlow);
+    return cv::makePtr<CudaNVFlowAdapter<cv::cuda::NvidiaOpticalFlow_1_0>>(opticalFlow);
 }
 
 cv::Ptr<cv::DenseOpticalFlow> makeNvOptFlow_2_0(int width, int height) {
-    return cv::makePtr<CudaNVFlowAdapter>(NvidiaOpticalFlow_2_0::create(width, height));
+    return cv::makePtr<CudaNVFlowAdapter<NvidiaOpticalFlow_2_0>>(NvidiaOpticalFlow_2_0::create(width, height));
 }
 
 int main(int argc, char* argv[]) {
@@ -125,11 +125,11 @@ int main(int argc, char* argv[]) {
     cv::Mat prev, next, temp_gt, temp_status;
     reader->read_next(prev, next, temp_gt, temp_status);
     std::vector<std::tuple<const char*, cv::Ptr<cv::DenseOpticalFlow>>> opt_flows = {
-        std::make_tuple("NvOptFlow", makeNvOptFlow_2_0(prev.rows, prev.cols)),
-        std::make_tuple("NVFlow_1.0", make_NVFlow(prev.rows, prev.cols)), ///only available since RTX 20xx
-        std::make_tuple("pyrLK", make_pyrLK()),
-        std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
-        std::make_tuple("denseRLOF", make_RLOF()),
+        std::make_tuple("NvOptFlow_2.0", makeNvOptFlow_2_0(prev.cols, prev.rows)), ///only available since RTX 20xx
+        std::make_tuple("NVFlow_1.0", make_NVFlow(prev.cols, prev.rows)), ///only available since RTX 20xx
+//        std::make_tuple("pyrLK", make_pyrLK()),
+//        std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
+//        std::make_tuple("denseRLOF", make_RLOF()),
     };
     {
 #include <fstream>
@@ -146,7 +146,7 @@ int main(int argc, char* argv[]) {
             std::printf("Optical flow algorithm: %s\n", name);
             output << "Optical flow algorithm: " << name << std::endl;
             std::tie(mean, stdDev) = calcMetrics(opt_flow, reader, [](int i, double err) {
-            std::printf("%d. %.5f\n", i, err);
+//            std::printf("%d. %.5f\n", i, err);
             });
             std::printf("mean: %f, std_dev: %f\n", mean, stdDev);
             output << "mean: " << mean << " std_dev: " << stdDev << std::endl;

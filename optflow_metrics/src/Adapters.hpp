@@ -51,22 +51,25 @@ private:
     cv::Ptr<cv::cuda::DenseOpticalFlow> _cudaDense;
 };
 
+template <typename NV_version>
 class CudaNVFlowAdapter : public cv::DenseOpticalFlow {
 public:
-    CudaNVFlowAdapter(const cv::Ptr<cv::cuda::NvidiaHWOpticalFlow>& cudaDense) : _cudaDense(cudaDense) { }
+    CudaNVFlowAdapter(const cv::Ptr<NV_version>& cudaDense) : _cudaDense(cudaDense) { }
 
     CV_WRAP void calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow) override {
-        cv::cuda::GpuMat gpuI0(I0), gpuI1(I1), gpuFlow;
-        _cudaDense->calc(gpuI0, gpuI1, gpuFlow);
-        gpuFlow.download(flow);
+        cv::Mat greyPrev, greyNext, stubFlow;
+        cv::cvtColor(I0.getMat(), greyPrev, cv::COLOR_BGR2GRAY);
+        cv::cvtColor(I1.getMat(), greyNext, cv::COLOR_BGR2GRAY);
+        _cudaDense->calc(greyPrev, greyNext, stubFlow);
+        _cudaDense->upSampler(stubFlow, I0.cols(), I0.rows(), _cudaDense->getGridSize(), flow);
     }
     /** @brief Releases all inner buffers.
     */
     CV_WRAP void collectGarbage() override {
-        _cudaDense->clear();
+        _cudaDense->collectGarbage();
     }
 private:
-    cv::Ptr<cv::cuda::NvidiaHWOpticalFlow> _cudaDense;
+    cv::Ptr<NV_version> _cudaDense;
 };
 
 class CudaSparse2DenseAdapter : public cv::DenseOpticalFlow {

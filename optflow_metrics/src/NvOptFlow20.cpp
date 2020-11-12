@@ -428,7 +428,6 @@ namespace
             NVOF_API_CALL(GetAPI()->nvOFSetIOCudaStreams(GetHandle(),
                 cv::cuda::StreamAccessor::getStream(m_inputStream), cv::cuda::StreamAccessor::getStream(m_outputStream)));
         }
-
         cv::cuda::GpuMat frame0GpuMat(_frame0.size(), _frame0.type(), (void*)m_frame0cuDevPtr,
             m_inputBufferStrideInfo.strideInfo[0].strideXInBytes);
         cv::cuda::GpuMat frame1GpuMat(_frame1.size(), _frame1.type(), (void*)m_frame1cuDevPtr,

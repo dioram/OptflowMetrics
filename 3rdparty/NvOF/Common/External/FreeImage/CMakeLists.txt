@@ -16,4 +16,14 @@ if (WIN32)
         IMPORTED_IMPLIB "${CMAKE_CURRENT_SOURCE_DIR}/${ARCH}/FreeImage.lib"
         INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}")
 
+else()
+
+    add_library(FreeImage SHARED IMPORTED GLOBAL)
+    find_path(FreeImage_INCLUDE_DIR FreeImage.h PATHS /usr/include/)
+    find_library(FreeImage_LIBRARY freeimage PATHS /usr/lib/x86_64-linux-gnu/)
+
+    set_target_properties(FreeImage PROPERTIES
+            IMPORTED_LOCATION "${FreeImage_LIBRARY}"
+            INTERFACE_INCLUDE_DIRECTORIES "${FreeImage_INCLUDE_DIR}")
+
 endif()
