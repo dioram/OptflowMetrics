@@ -92,8 +92,8 @@ cv::Ptr<cv::DenseOpticalFlow> make_NVFlow(int height, int width) {
     return cv::makePtr<CudaNVFlowAdapter>(opticalFlow);
 }
 
-cv::Ptr<cv::DenseOpticalFlow> makeNvOptFlow_2_0(const cv::Size& sz, const bool& colored = true) {
-    return NvOptFlow20::create(sz, colored);
+cv::Ptr<cv::DenseOpticalFlow> makeNvOptFlow_2_0(int width, int height) {
+    return cv::makePtr<CudaNVFlowAdapter>(NvidiaOpticalFlow_2_0::create(width, height));
 }
 
 int main(int argc, char* argv[]) {
@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
     cv::Mat prev, next, temp_gt, temp_status;
     reader->read_next(prev, next, temp_gt, temp_status);
     std::vector<std::tuple<const char*, cv::Ptr<cv::DenseOpticalFlow>>> opt_flows = {
-        std::make_tuple("NvOptFlow", makeNvOptFlow_2_0(cv::Size(1242, 375))),
+        std::make_tuple("NvOptFlow", makeNvOptFlow_2_0(prev.rows, prev.cols)),
         std::make_tuple("NVFlow_1.0", make_NVFlow(prev.rows, prev.cols)), ///only available since RTX 20xx
         std::make_tuple("pyrLK", make_pyrLK()),
         std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
