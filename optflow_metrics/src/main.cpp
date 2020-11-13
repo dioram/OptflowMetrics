@@ -4,6 +4,7 @@
 #include <readers/Readers.h>
 #include "Adapters.hpp"
 #include "NvOptFlow20.h"
+#include <functional>
 
 float calcMetric(cv::Mat predicted, cv::Mat label) {
     cv::Mat diff = predicted - label;
@@ -41,7 +42,7 @@ cv::Mat drawMotion(const cv::Mat& img, const cv::Mat& motion) {
     return res;
 }
 
-std::tuple<double, double> calcMetrics(const cv::Ptr<cv::DenseOpticalFlow>& optflow, const IReaderPtr& reader, void (*logger)(int, double) = NULL) {
+std::tuple<double, double> calcMetrics(const cv::Ptr<cv::DenseOpticalFlow>& optflow, const IReaderPtr& reader, std::function<void(int, double)> logger = NULL) {
     cv::Mat prev, next, gt, gt_status;
     std::vector<double> errs;
     int iter = 0;
@@ -108,15 +109,13 @@ int main(int argc, char* argv[]) {
         reader = Readers::makeKittiReader(argv[1]);
     }
     else if (!strcmp(argv[2], "sintel")) {
-        if (argc < 5) {
-            std::cerr << "If sintel, you must also provide subfolder "
-                         "(i.e. market_2, alley_1, ambush_2 etc. And rendering type - 0 for albedo, 1 for clean or 2 for final"
-                      << std::endl;
+        if (argc < 4) {
+            std::cerr << "If sintel, you must also provide rendering type - 0 for albedo, 1 for clean or 2 for final" << std::endl;
             return -1;
         }
-        int r_t = atoi(argv[4]);
+        int r_t = atoi(argv[3]);
         RenderingType type(static_cast<RenderingType>(r_t));
-        reader = Readers::makeSintelReader(argv[1], argv[3], type);
+        reader = Readers::makeSintelReader(argv[1], type);
     }
     else {
         std::cerr << "unknown dataset type \"" << argv[2] << "\"" << std::endl;
@@ -125,19 +124,20 @@ int main(int argc, char* argv[]) {
     cv::Mat prev, next, temp_gt, temp_status;
     reader->read_next(prev, next, temp_gt, temp_status);
     std::vector<std::tuple<const char*, cv::Ptr<cv::DenseOpticalFlow>>> opt_flows = {
-        std::make_tuple("NvOptFlow_2.0", makeNvOptFlow_2_0(prev.cols, prev.rows)), ///only available since RTX 20xx
-        std::make_tuple("NVFlow_1.0", make_NVFlow(prev.cols, prev.rows)), ///only available since RTX 20xx
-//        std::make_tuple("pyrLK", make_pyrLK()),
-//        std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
-//        std::make_tuple("denseRLOF", make_RLOF()),
+        //std::make_tuple("NvOptFlow_2.0", makeNvOptFlow_2_0(prev.cols, prev.rows)), ///only available since RTX 20xx
+        //std::make_tuple("NVFlow_1.0", make_NVFlow(prev.cols, prev.rows)), ///only available since RTX 20xx
+        std::make_tuple("pyrLK", make_pyrLK()),
+        std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
+        std::make_tuple("denseRLOF", make_RLOF()),
     };
+    reader->reset();
     {
 #include <fstream>
         std::ofstream output;
         if (!strcmp(argv[2], "kitti"))
-            output.open("testing_"+std::string(argv[2])+".txt");
+            output.open("testing_" + std::string(argv[2]) + ".txt");
         else if (!strcmp(argv[2], "sintel"))
-            output.open("testing_"+std::string(argv[2])+"_"+std::string(argv[3])+"_"+std::string(argv[4])+".txt", std::ios_base::app);
+            output.open("testing_" + std::string(argv[2]) + "_" + std::string(argv[3]) + ".txt", std::ios_base::app);
         for (const auto &opt_flow_info : opt_flows) {
             double mean, stdDev;
             const char *name;
@@ -145,10 +145,12 @@ int main(int argc, char* argv[]) {
             std::tie(name, opt_flow) = opt_flow_info;
             std::printf("Optical flow algorithm: %s\n", name);
             output << "Optical flow algorithm: " << name << std::endl;
-            std::tie(mean, stdDev) = calcMetrics(opt_flow, reader, [](int i, double err) {
-//            std::printf("%d. %.5f\n", i, err);
+            std::tie(mean, stdDev) = calcMetrics(opt_flow, reader, [&reader](int i, double err) {
+                std::printf("[%05d / %05zu] %.5g\r", i, reader->size(), err);
             });
+            std::printf("\n");
             std::printf("mean: %f, std_dev: %f\n", mean, stdDev);
+            std::cout.seekp(0, std::cout.end);
             output << "mean: " << mean << " std_dev: " << stdDev << std::endl;
         }
         output.close();

@@ -6,9 +6,9 @@ namespace fs = boost::filesystem;
 
 std::vector<std::string> RenderStrings = {"albedo", "clean", "final"};
 
-void readSintelFlow(cv::Mat& img, const char* filename)
+void readSintelFlow(cv::Mat& img, const std::string& filename)
 {
-    FILE *stream = fopen(filename, "rb");
+    FILE *stream = fopen(filename.c_str(), "rb");
     if (stream == nullptr)
         return;
 
@@ -44,8 +44,7 @@ void readSintelFlow(cv::Mat& img, const char* filename)
     fclose(stream);
 }
 
-SintelReader::SintelReader(const std::string& dir, const std::string& subfolder, RenderingType type ) :
-                            _dir(dir), _currIdx(0), _subfolder(subfolder), _type(type) {
+SintelReader::SintelReader(const std::string& dir, RenderingType type) {
     if (!fs::is_directory(dir)) {
         char msg[512];
         std::sprintf(msg, "%s doesn't exist or not a directory", dir.c_str());
@@ -57,45 +56,70 @@ SintelReader::SintelReader(const std::string& dir, const std::string& subfolder,
         std::sprintf(msg, "wrong Rendering Type");
         throw std::invalid_argument(msg);
     }
-    path_to_images = dir + "/MPI-Sintel-training_images/training/" + RenderStrings[type] + "/" + subfolder;
-    path_to_flo = dir + "/MPI-Sintel-training_extras/training/flow/" + subfolder;
-    if (!fs::is_directory(path_to_images)) {
+    fs::path dir_ = fs::path(dir) / "training";
+    if (!fs::is_directory(dir_)) {
         char msg[512];
-        std::sprintf(msg, "%s doesn't exist or not a directory", path_to_images.c_str());
+        std::sprintf(msg, "%s doesn't exist or not a directory", dir_.c_str());
         throw std::invalid_argument(msg);
     }
-    if (!fs::is_directory(path_to_flo)) {
-        char msg[512];
-        std::sprintf(msg, "%s doesn't exist or not a directory", path_to_flo.c_str());
-        throw std::invalid_argument(msg);
+
+    const auto& renderingDir = dir_ / RenderStrings[type];
+    const auto& flowDir = dir_ / "flow";
+    char frameName[256];
+
+    std::vector<fs::path> scenes;
+    std::copy(fs::directory_iterator(renderingDir), fs::directory_iterator(), back_inserter(scenes));
+    for (const auto& s : scenes) {
+        if (fs::is_directory(s)) {
+            const auto& scene = s.filename();
+            const auto& sceneDir = renderingDir / scene;
+            const auto& sceneFlow = flowDir / scene;
+            for (int i = 1; ; ++i) {
+                std::sprintf(frameName, "frame_%04d", i);
+                fs::path flow = (sceneFlow / frameName).replace_extension(".flo");
+                if (!fs::exists(flow)) {
+                    break;
+                }
+                fs::path img1 = (sceneDir / frameName).replace_extension(".png");
+                std::sprintf(frameName, "frame_%04d", i + 1);
+                fs::path img2 = (sceneDir / frameName).replace_extension(".png");
+                _paths.emplace_back(img1.string(), img2.string(), flow.string());
+            }
+        }
     }
+    _currentPair = _paths.begin();
 }
 
-bool SintelReader::read_current(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& status) {
-    char gtPath[512];
-    std::sprintf(gtPath, "%s/frame_%04d.flo", path_to_flo.c_str(), _currIdx);
-    if (!fs::exists(gtPath)) {
-        return false;
-    }
-    status = cv::Mat();
-    readSintelFlow(gt, gtPath);
-
-    char img[512];
-    std::sprintf(img, "%s/frame_%04d.png", path_to_images.c_str(), _currIdx);
-    prev = cv::imread(img);
-    std::sprintf(img, "%s/frame_%04d.png", path_to_images.c_str(), _currIdx+1);
-    next = cv::imread(img);
+bool SintelReader::read_current(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& gt_status) {
+    std::string img1, img2, flow; std::tie(img1, img2, flow) = *_currentPair;
+    gt_status = cv::Mat();
+    readSintelFlow(gt, flow);
+    prev = cv::imread(img1);
+    next = cv::imread(img2);
     return !(prev.empty() || next.empty());
 }
 
 bool SintelReader::read_next(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& gt_status) {
-    ++_currIdx;
-    return read_current(prev, next, gt, gt_status);
+    ++_currentPair;
+    if (_currentPair == _paths.end()) {
+        return false;
+    }
+    read_current(prev, next, gt, gt_status);
+    return true;
 }
-bool SintelReader::read_prev(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& status) {
-    --_currIdx;
-    return _currIdx != 0 && read_current(prev, next, gt, status);
+bool SintelReader::read_prev(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& gt_status) {
+    if (_currentPair == _paths.begin()) {
+        return false;
+    }
+    --_currentPair;
+    read_current(prev, next, gt, gt_status);
+    return true;
 }
+
+size_t SintelReader::size() const {
+    return _paths.size();
+}
+
 void SintelReader::reset() {
-    _currIdx = 0;
+    _currentPair = _paths.begin();
 }

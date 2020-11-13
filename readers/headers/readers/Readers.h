@@ -6,5 +6,5 @@
 class Readers {
 public:
 	static IReaderPtr makeKittiReader(const std::string& dir);
-	static IReaderPtr makeSintelReader(const std::string& dir, const std::string& subfolder, RenderingType type);
+	static IReaderPtr makeSintelReader(const std::string& dir, const RenderingType& type);
 };

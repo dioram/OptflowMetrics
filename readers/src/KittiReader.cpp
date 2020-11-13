@@ -20,6 +20,13 @@ KittyReader::KittyReader(const std::string& dir) : _dir(dir), _currIdx(-1) {
         std::sprintf(msg, "%s doesn't exist or not a directory", dir.c_str());
         throw std::invalid_argument(msg);
     }
+    std::vector<fs::path> files;
+    std::copy(fs::directory_iterator(fs::path(dir) / "training/flow_noc"), fs::directory_iterator(), back_inserter(files));
+    _filesCount = files.size();
+}
+
+size_t KittyReader::size() const {
+    return _filesCount;
 }
 
 bool KittyReader::read_current(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& status) {

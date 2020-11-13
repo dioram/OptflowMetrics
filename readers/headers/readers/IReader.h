@@ -9,6 +9,7 @@ public:
 	virtual bool read_next(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& status) = 0;
 	virtual bool read_prev(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& status) = 0;
 	virtual void reset() = 0;
+	virtual size_t size() const = 0;
 };
 
 typedef std::shared_ptr<IReader> IReaderPtr;
