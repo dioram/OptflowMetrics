@@ -100,11 +100,11 @@ bool SintelReader::read_current(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::M
 }
 
 bool SintelReader::read_next(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& gt_status) {
-    ++_currentPair;
     if (_currentPair == _paths.end()) {
         return false;
     }
     read_current(prev, next, gt, gt_status);
+    ++_currentPair;
     return true;
 }
 bool SintelReader::read_prev(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& gt_status) {

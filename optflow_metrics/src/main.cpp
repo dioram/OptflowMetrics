@@ -146,11 +146,10 @@ int main(int argc, char* argv[]) {
             std::printf("Optical flow algorithm: %s\n", name);
             output << "Optical flow algorithm: " << name << std::endl;
             std::tie(mean, stdDev) = calcMetrics(opt_flow, reader, [&reader](int i, double err) {
-                std::printf("[%05d / %05zu] %.5g\r", i, reader->size(), err);
+                std::printf("\r[%05d / %05zu] epe: %10.5g", i + 1, reader->size(), err);
             });
             std::printf("\n");
-            std::printf("mean: %f, std_dev: %f\n", mean, stdDev);
-            std::cout.seekp(0, std::cout.end);
+            std::printf("mean: %.5f, std_dev: %.5f\n", mean, stdDev);
             output << "mean: " << mean << " std_dev: " << stdDev << std::endl;
         }
         output.close();
