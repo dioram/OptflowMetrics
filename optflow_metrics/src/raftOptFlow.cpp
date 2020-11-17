@@ -28,13 +28,13 @@ torch::Tensor toTensor(const cv::Mat& img) {
 
 void RaftOptFlowImpl::calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow) {
     const cv::Mat& I0_ = I0.getMat();
+    int pad_ht = (((I0_.rows / 8) + 1) * 8 - I0_.rows) % 8;
+    int pad_wd = (((I0_.cols / 8) + 1) * 8 - I0_.cols) % 8;
     const cv::Mat& I1_ = I1.getMat();
     std::vector<torch::jit::IValue> inputs;
     for (const auto& inp : { I0, I1 }) {
         cv::Mat cvInp = inp.getMat();
         cv::Mat padded;
-        int pad_ht = (((cvInp.rows / 8) + 1) * 8 - cvInp.rows) % 8;
-        int pad_wd = (((cvInp.cols / 8) + 1) * 8 - cvInp.cols) % 8;
         cv::copyMakeBorder(cvInp, padded, pad_ht / 2, pad_ht - pad_ht / 2, pad_wd / 2, pad_wd - pad_wd / 2, cv::BORDER_REPLICATE);
         inputs.push_back(toTensor(padded));
     }
@@ -52,7 +52,7 @@ void RaftOptFlowImpl::calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutput
         resTensor.data_ptr<float>(), 
         resTensor.numel() * sizeof(float),
         cudaMemcpyDeviceToHost);
-    flow_ = flow_(cv::Rect(flow_.cols - I0.cols(), flow_.rows - I0.rows(), I0.cols(), I0.rows()));
+    flow_ = flow_(cv::Rect(pad_wd / 2, pad_ht / 2, I0.cols(), I0.rows()));
 }
 
 void RaftOptFlowImpl::collectGarbage() {

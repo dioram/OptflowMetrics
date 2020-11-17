@@ -50,7 +50,9 @@ std::tuple<double, double> calcMetrics(const cv::Ptr<cv::DenseOpticalFlow>& optf
     while (reader->read_next(prev, next, gt, gt_status)) {
         cv::Mat flow;
         optflow->calc(prev, next, flow);
-        //cv::Mat temp = drawMotion(prev, flow);
+        /*cv::Mat temp = drawMotion(prev, flow);
+        cv::imshow("temp", temp);
+        cv::waitKey();*/
         double err = calcMetric(flow, gt);
         if (logger != NULL) {
             logger(iter++, err);
