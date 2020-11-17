@@ -5,6 +5,7 @@
 #include "Adapters.hpp"
 #include "NvOptFlow20.h"
 #include <functional>
+#include "raftOptFlow.h"
 
 float calcMetric(cv::Mat predicted, cv::Mat label) {
     cv::Mat diff = predicted - label;
@@ -124,11 +125,12 @@ int main(int argc, char* argv[]) {
     cv::Mat prev, next, temp_gt, temp_status;
     reader->read_next(prev, next, temp_gt, temp_status);
     std::vector<std::tuple<const char*, cv::Ptr<cv::DenseOpticalFlow>>> opt_flows = {
+        std::make_tuple("raft", RaftOptFlow::create()),
         //std::make_tuple("NvOptFlow_2.0", makeNvOptFlow_2_0(prev.cols, prev.rows)), ///only available since RTX 20xx
         //std::make_tuple("NVFlow_1.0", make_NVFlow(prev.cols, prev.rows)), ///only available since RTX 20xx
-        std::make_tuple("pyrLK", make_pyrLK()),
-        std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
-        std::make_tuple("denseRLOF", make_RLOF()),
+        //std::make_tuple("pyrLK", make_pyrLK()),
+        //std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
+        //std::make_tuple("denseRLOF", make_RLOF()),
     };
     reader->reset();
     {

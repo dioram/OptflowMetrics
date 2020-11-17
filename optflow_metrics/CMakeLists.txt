@@ -5,7 +5,8 @@ set(${PROJECT_NAME}_TARGET_NAME ${PROJECT_NAME})
 set(SOURCE_FILES 
 	src/main.cpp
 	src/Adapters.hpp
-	src/NvOptFlow20.h src/NvOptFlow20.cpp)
+	src/NvOptFlow20.h src/NvOptFlow20.cpp
+	src/raftOptFlow.h src/raftOptFlow.cpp)
 
 add_executable(${${PROJECT_NAME}_TARGET_NAME} ${SOURCE_FILES})
 target_include_directories(${${PROJECT_NAME}_TARGET_NAME}
@@ -24,3 +25,23 @@ target_include_directories(${${PROJECT_NAME}_TARGET_NAME} PRIVATE ${OpenCV_INCLU
 target_link_libraries(${${PROJECT_NAME}_TARGET_NAME} PRIVATE ${OpenCV_LIBRARIES})
 
 target_link_libraries(${${PROJECT_NAME}_TARGET_NAME} PRIVATE readers NvOFCommon)
+
+find_package(Torch REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+target_link_libraries(${${PROJECT_NAME}_TARGET_NAME} PRIVATE "${TORCH_LIBRARIES}")
+set_property(TARGET ${${PROJECT_NAME}_TARGET_NAME} PROPERTY CXX_STANDARD 17)
+
+# The following code block is suggested to be used on Windows.
+# According to https://github.com/pytorch/pytorch/issues/25457,
+# the DLLs need to be copied to avoid memory errors.
+if (MSVC)
+  file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
+  add_custom_command(TARGET ${${PROJECT_NAME}_TARGET_NAME}
+                     POST_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                     ${TORCH_DLLS}
+                     $<TARGET_FILE_DIR:${${PROJECT_NAME}_TARGET_NAME}>
+                     COMMAND ${CMAKE_COMMAND} -E copy_directory
+                     ${CMAKE_CURRENT_SOURCE_DIR}/models
+                     $<TARGET_FILE_DIR:${${PROJECT_NAME}_TARGET_NAME}>/models)
+endif (MSVC)
