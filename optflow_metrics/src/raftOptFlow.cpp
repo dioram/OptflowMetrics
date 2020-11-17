@@ -19,15 +19,16 @@ RaftOptFlowImpl::RaftOptFlowImpl() {
 }
 
 torch::Tensor toTensor(const cv::Mat& img) {
-    auto img_t = torch::zeros({ img.rows, img.cols, img.channels(), 1 }, c10::TensorOptions(c10::Device(c10::kCUDA, 0)));
-    //stride=width*channels
     cv::Mat flt; img.convertTo(flt, CV_32F);
-    cudaMemcpy(img_t.data_ptr(), flt.data, flt.total() * flt.channels() * sizeof(float), cudaMemcpyHostToDevice);
-    img_t = img_t.permute({ 3, 2, 0, 1 });
-    return img_t;
+    cv::cvtColor(flt, flt, cv::COLOR_BGR2RGB);
+    torch::Tensor res = torch::from_blob(flt.data, { 1, flt.rows, flt.cols, flt.channels(), });
+    res = res.permute({ 0, 3, 1, 2 }).to(c10::kCUDA);
+    return res;
 }
 
 void RaftOptFlowImpl::calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow) {
+    const cv::Mat& I0_ = I0.getMat();
+    const cv::Mat& I1_ = I1.getMat();
     std::vector<torch::jit::IValue> inputs;
     for (const auto& inp : { I0, I1 }) {
         cv::Mat cvInp = inp.getMat();
@@ -44,13 +45,12 @@ void RaftOptFlowImpl::calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutput
     }
     auto res = _module.forward(inputs).toTuple();
     auto resTensor = res->elements()[1].toTensor();
-    resTensor = resTensor.permute({ 0, 2, 3, 1, });
-    std::cout << resTensor.sizes() << std::endl;
+    resTensor = resTensor.permute({ 0, 2, 3, 1 }).contiguous();
     cv::Mat& flow_ = flow.getMatRef();
     cudaMemcpy(
         flow_.ptr<float>(), 
         resTensor.data_ptr<float>(), 
-        flow_.total() * flow_.channels() * sizeof(float),
+        resTensor.numel() * sizeof(float),
         cudaMemcpyDeviceToHost);
     flow_ = flow_(cv::Rect(flow_.cols - I0.cols(), flow_.rows - I0.rows(), I0.cols(), I0.rows()));
 }
