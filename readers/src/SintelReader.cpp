@@ -92,10 +92,10 @@ SintelReader::SintelReader(const std::string& dir, RenderingType type) {
 
 bool SintelReader::read_current(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& gt_status) {
     std::string img1, img2, flow; std::tie(img1, img2, flow) = *_currentPair;
-    gt_status = cv::Mat::ones(prev.size(), CV_8UC1);
     readSintelFlow(gt, flow);
     prev = cv::imread(img1);
     next = cv::imread(img2);
+    gt_status = cv::Mat::ones(prev.size(), CV_8UC1);
     return !(prev.empty() || next.empty());
 }
 

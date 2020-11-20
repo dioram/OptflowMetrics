@@ -8,6 +8,8 @@ class Sparse2DenseAdapter : public cv::dioram::DenseOpticalFlow {
 public:
     Sparse2DenseAdapter(const cv::Ptr<cv::SparseOpticalFlow>& sparse) : _sparse(sparse) { }
 
+    CV_WRAP void collectGarbage() override {}
+
     CV_WRAP void calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow, cv::OutputArray statuses) override {
         cv::Mat pts(I0.rows(), I0.cols(), CV_32FC2);
         for (int i = 0; i < pts.rows; ++i) {
@@ -32,6 +34,8 @@ class Dense2DenseAdapter : public cv::dioram::DenseOpticalFlow {
 public:
     Dense2DenseAdapter(const cv::Ptr<cv::DenseOpticalFlow>& cudaDense) : _cudaDense(cudaDense) { }
 
+    CV_WRAP void collectGarbage() override {}
+
     CV_WRAP void calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow, cv::OutputArray statuses) override {
         statuses.getMatRef() = cv::Mat::ones(I0.rows(), I0.cols(), CV_8UC1);
         _cudaDense->calc(I0, I1, flow);
@@ -43,6 +47,8 @@ private:
 class CudaDense2DenseAdapter : public cv::dioram::DenseOpticalFlow {
 public:
     CudaDense2DenseAdapter(const cv::Ptr<cv::cuda::DenseOpticalFlow>& cudaDense) : _cudaDense(cudaDense) { }
+
+    CV_WRAP void collectGarbage() override {}
 
     CV_WRAP void calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow, cv::OutputArray statuses) override {
         cv::cuda::GpuMat gpuI0(I0), gpuI1(I1), gpuFlow;
@@ -59,8 +65,16 @@ class CudaNVFlowAdapter : public cv::dioram::DenseOpticalFlow {
 public:
     CudaNVFlowAdapter(const cv::Ptr<NV_version>& cudaDense) : _cudaDense(cudaDense) { }
 
+    CV_WRAP void collectGarbage() override
+    {
+        _cudaDense->collectGarbage();
+    }
+
     CV_WRAP void calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow, cv::OutputArray statuses) override {
         cv::Mat greyPrev, greyNext, stubFlow;
+//        cv::Mat alpha = cv::Mat::ones(I0.size(), CV_8UC1);
+//        cv::merge(std::vector<cv::Mat>{alpha, I0.getMat()}, greyPrev);
+//        cv::merge(std::vector<cv::Mat>{alpha, I1.getMat()}, greyNext);
         cv::cvtColor(I0.getMat(), greyPrev, cv::COLOR_BGR2GRAY);
         cv::cvtColor(I1.getMat(), greyNext, cv::COLOR_BGR2GRAY);
         statuses.getMatRef() = cv::Mat::ones(I0.rows(), I0.cols(), CV_8UC1);
@@ -74,6 +88,8 @@ private:
 class CudaSparse2DenseAdapter : public cv::dioram::DenseOpticalFlow {
 public:
     CudaSparse2DenseAdapter(const cv::Ptr<cv::cuda::SparseOpticalFlow>& sparse) : _sparse(sparse) { }
+
+    CV_WRAP void collectGarbage() override {}
 
     CV_WRAP void calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow, cv::OutputArray statuses) override {
         cv::Mat pts(I0.rows(), I0.cols(), CV_32FC2);
