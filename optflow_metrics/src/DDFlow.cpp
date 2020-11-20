@@ -5,8 +5,7 @@
 struct DDFlowImpl : public DDFlow {
 public:
     DDFlowImpl();
-    CV_WRAP virtual void calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow) override;
-    CV_WRAP virtual void collectGarbage() override;
+    CV_WRAP virtual void calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow, cv::OutputArray statuses) override;
 
 private:
     Ort::Env env;
@@ -16,7 +15,8 @@ private:
 
 DDFlowImpl::DDFlowImpl() : _session(env, L"models/ddflow.onnx", Ort::SessionOptions{nullptr}) {}
 
-void DDFlowImpl::calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow) {
+void DDFlowImpl::calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow, cv::OutputArray statuses) {
+    statuses.getMatRef() = cv::Mat::ones(I0.size(), CV_8UC1);
     auto memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
     std::array<int64_t, 4> inpSz = { 1, I0.channels(), I0.rows(), I0.cols(), };
     std::array<int64_t, 4> outSz = { 1, 2, I0.rows(), I0.cols(), };
@@ -41,9 +41,6 @@ void DDFlowImpl::calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray
     _session.Run(Ort::RunOptions{ nullptr }, input_names, inputs.data(), 2, output_names, &flow_, 1);
 }
 
-void DDFlowImpl::collectGarbage() {
-}
-
-cv::Ptr<cv::DenseOpticalFlow> DDFlow::create() {
+cv::Ptr<cv::dioram::DenseOpticalFlow> DDFlow::create() {
     return cv::makePtr<DDFlowImpl>();
 }

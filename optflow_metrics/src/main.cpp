@@ -6,19 +6,15 @@
 #include "NvOptFlow20.h"
 #include <functional>
 #include "raftOptFlow.h"
-#include "DDFlow.h"
+//#include "DDFlow.h"
+#include <boost/chrono.hpp>
 
-float calcMetric(cv::Mat predicted, cv::Mat label) {
+float calcMetric(const cv::Mat& predicted, const cv::Mat& label, const cv::Mat& mask) {
     cv::Mat diff = predicted - label;
-    float metric = 0;
-    for (int j = 0; j < diff.rows; j++) {
-        for (int i = 0; i < diff.cols; i++) {
-            cv::Point2f diff_at = diff.at<cv::Point2f>(j, i);
-            metric += sqrt(diff_at.y * diff_at.y + diff_at.x * diff_at.x);
-        }
-    }
-    metric /= diff.rows * diff.cols;
-    return metric;
+    cv::Mat sqr; cv::multiply(diff, diff, sqr);
+    cv::Mat reduced; cv::transform(sqr, reduced, cv::Matx12f {1, 1});
+    cv::Mat sqrt; cv::sqrt(reduced, sqrt);
+    return cv::mean(sqrt, mask)[0];
 }
 
 template<typename T>
@@ -44,38 +40,46 @@ cv::Mat drawMotion(const cv::Mat& img, const cv::Mat& motion) {
     return res;
 }
 
-std::tuple<double, double> calcMetrics(const cv::Ptr<cv::DenseOpticalFlow>& optflow, const IReaderPtr& reader, std::function<void(int, double)> logger = NULL) {
+std::tuple<double, double, double> calcMetrics(const cv::Ptr<cv::dioram::DenseOpticalFlow>& optflow, const IReaderPtr& reader, std::function<void(int, float)> logger = NULL) {
     cv::Mat prev, next, gt, gt_status;
     std::vector<double> errs;
+    double executionTime = 0;
     int iter = 0;
     while (reader->read_next(prev, next, gt, gt_status)) {
-        cv::Mat flow;
-        optflow->calc(prev, next, flow);
+        cv::Mat flow, status;
+        auto start = boost::chrono::high_resolution_clock::now();
+        optflow->calc(prev, next, flow, status);
+        auto stop = boost::chrono::high_resolution_clock::now();
+        if (iter > 1) { // skip a first execution because of there is some dilation in cuda implementations
+            executionTime += (boost::chrono::duration_cast<boost::chrono::milliseconds>(stop - start)).count();
+        }
         /*cv::Mat temp = drawMotion(prev, flow);
         cv::imshow("temp", temp);
         cv::waitKey();*/
-        double err = calcMetric(flow, gt);
+        cv::Mat mask; cv::bitwise_and(status, gt_status, mask);
+        float err = calcMetric(flow, gt, mask);
         if (logger != NULL) {
-            logger(iter++, err);
+            logger(iter, err);
         }
+        ++iter;
         errs.push_back(err);
     }
     reader->reset();
     cv::Scalar mean, stdDev; cv::meanStdDev(errs, mean, stdDev);
-    return std::make_tuple(mean[0], stdDev[0]);
+    return std::make_tuple(mean[0], stdDev[0], executionTime / (iter - 2));
 }
 
-cv::Ptr<cv::DenseOpticalFlow> make_pyrLK() {
+cv::Ptr<cv::dioram::DenseOpticalFlow> make_pyrLK() {
     auto opticalFlow = cv::SparsePyrLKOpticalFlow::create({ 21, 21, }, 3, cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, .01), 0, 10e-4);
     return cv::makePtr<Sparse2DenseAdapter>(opticalFlow);
 }
 
-cv::Ptr<cv::DenseOpticalFlow> make_cudaPyrLK() {
+cv::Ptr<cv::dioram::DenseOpticalFlow> make_cudaPyrLK() {
     auto opticalFlow = cv::cuda::SparsePyrLKOpticalFlow::create({ 21, 21, }, 3, 30, false);
     return cv::makePtr<CudaSparse2DenseAdapter>(opticalFlow);
 }
-
-cv::Ptr<cv::DenseOpticalFlow> make_RLOF() {
+ 
+cv::Ptr<cv::dioram::DenseOpticalFlow> make_RLOF() {
     auto param = cv::optflow::RLOFOpticalFlowParameter::create();
     param->setUseIlluminationModel(true);
     param->setSolverType(cv::optflow::ST_BILINEAR);
@@ -89,20 +93,19 @@ cv::Ptr<cv::DenseOpticalFlow> make_RLOF() {
     param->setCrossSegmentationThreshold(10);
     param->setUseGlobalMotionPrior(false);
     auto opticalFlow = cv::optflow::DenseRLOFOpticalFlow::create(param);
-    return opticalFlow;
+    return cv::makePtr<Dense2DenseAdapter>(opticalFlow);
 }
 
-cv::Ptr<cv::DenseOpticalFlow> make_NVFlow( int width, int height) {
+cv::Ptr<cv::dioram::DenseOpticalFlow> make_NVFlow( int width, int height) {
     auto opticalFlow = cv::cuda::NvidiaOpticalFlow_1_0::create(width, height);
     return cv::makePtr<CudaNVFlowAdapter<cv::cuda::NvidiaOpticalFlow_1_0>>(opticalFlow);
 }
 
-cv::Ptr<cv::DenseOpticalFlow> makeNvOptFlow_2_0(int width, int height) {
+cv::Ptr<cv::dioram::DenseOpticalFlow> makeNvOptFlow_2_0(int width, int height) {
     return cv::makePtr<CudaNVFlowAdapter<NvidiaOpticalFlow_2_0>>(NvidiaOpticalFlow_2_0::create(width, height));
 }
 
 int main(int argc, char* argv[]) {
-    auto ddflow = DDFlow::create();
     if (argc < 3) {
         std::cerr << "usage: <path_to_dataset> <kitti|sintel> If sintel, you must also provide subfolder "
                      "(i.e. market_2, alley_1, ambush_2 etc. And rendering type - 0 for albedo, 1 for clean or 2 for final"
@@ -128,13 +131,14 @@ int main(int argc, char* argv[]) {
     }
     cv::Mat prev, next, temp_gt, temp_status;
     reader->read_next(prev, next, temp_gt, temp_status);
-    std::vector<std::tuple<const char*, cv::Ptr<cv::DenseOpticalFlow>>> opt_flows = {
+    std::vector<std::tuple<const char*, cv::Ptr<cv::dioram::DenseOpticalFlow>>> opt_flows = {
         std::make_tuple("raft", RaftOptFlow::create()),
         //std::make_tuple("NvOptFlow_2.0", makeNvOptFlow_2_0(prev.cols, prev.rows)), ///only available since RTX 20xx
         //std::make_tuple("NVFlow_1.0", make_NVFlow(prev.cols, prev.rows)), ///only available since RTX 20xx
-        //std::make_tuple("pyrLK", make_pyrLK()),
-        //std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
-        //std::make_tuple("denseRLOF", make_RLOF()),
+        std::make_tuple("pyrLK", make_pyrLK()),
+        std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
+        std::make_tuple("denseRLOF", make_RLOF()),
+        //std::make_tuple("ddflow", DDFlow::create()),
     };
     reader->reset();
     {
@@ -145,17 +149,19 @@ int main(int argc, char* argv[]) {
         else if (!strcmp(argv[2], "sintel"))
             output.open("testing_" + std::string(argv[2]) + "_" + std::string(argv[3]) + ".txt", std::ios_base::app);
         for (const auto &opt_flow_info : opt_flows) {
-            double mean, stdDev;
             const char *name;
-            cv::Ptr<cv::DenseOpticalFlow> opt_flow;
+            cv::Ptr<cv::dioram::DenseOpticalFlow> opt_flow;
             std::tie(name, opt_flow) = opt_flow_info;
             std::printf("Optical flow algorithm: %s\n", name);
             output << "Optical flow algorithm: " << name << std::endl;
-            std::tie(mean, stdDev) = calcMetrics(opt_flow, reader, [&reader](int i, double err) {
-                std::printf("\r[%05d / %05zu] epe: %10.5g", i + 1, reader->size(), err);
-            });
+            double mean, stdDev, executionTime;
+            std::tie(mean, stdDev, executionTime) = calcMetrics(opt_flow, reader,
+                [&reader](int i, float err) {
+                    std::printf("\r[%05d / %05zu] epe: %10.5g", i + 1, reader->size(), err);
+                }
+            );
             std::printf("\n");
-            std::printf("mean: %.5f, std_dev: %.5f\n", mean, stdDev);
+            std::printf("mean: %.5f, std_dev: %.5f, exec_time: %.5f ms\n", mean, stdDev, executionTime);
             output << "mean: " << mean << " std_dev: " << stdDev << std::endl;
         }
         output.close();

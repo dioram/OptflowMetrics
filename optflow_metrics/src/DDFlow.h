@@ -1,8 +1,8 @@
 #pragma once
-#include <opencv2/opencv.hpp>
+#include "DenseOpticalFlow.h"
 
-class DDFlow : public cv::DenseOpticalFlow
+class DDFlow : public cv::dioram::DenseOpticalFlow
 {
 public:
-	static cv::Ptr<cv::DenseOpticalFlow> create();
+	static cv::Ptr<cv::dioram::DenseOpticalFlow> create();
 };

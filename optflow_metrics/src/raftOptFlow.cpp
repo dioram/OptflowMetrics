@@ -6,9 +6,7 @@ class RaftOptFlowImpl : public RaftOptFlow
 {
 public:
     RaftOptFlowImpl();
-
-    CV_WRAP virtual void calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow) override;
-    CV_WRAP virtual void collectGarbage() override;
+    CV_WRAP virtual void calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow, cv::OutputArray statuses) override;
 
 private:
     torch::jit::Module _module;
@@ -26,7 +24,8 @@ torch::Tensor toTensor(const cv::Mat& img) {
     return res;
 }
 
-void RaftOptFlowImpl::calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow) {
+void RaftOptFlowImpl::calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow, cv::OutputArray statuses) {
+    statuses.getMatRef() = cv::Mat::ones(I0.size(), CV_8UC1);
     const cv::Mat& I0_ = I0.getMat();
     int pad_ht = (((I0_.rows / 8) + 1) * 8 - I0_.rows) % 8;
     int pad_wd = (((I0_.cols / 8) + 1) * 8 - I0_.cols) % 8;
@@ -55,9 +54,6 @@ void RaftOptFlowImpl::calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutput
     flow_ = flow_(cv::Rect(pad_wd / 2, pad_ht / 2, I0.cols(), I0.rows()));
 }
 
-void RaftOptFlowImpl::collectGarbage() {
-}
-
-cv::Ptr<cv::DenseOpticalFlow> RaftOptFlow::create() {
+cv::Ptr<cv::dioram::DenseOpticalFlow> RaftOptFlow::create() {
 	return cv::makePtr<RaftOptFlowImpl>();
 }

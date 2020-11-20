@@ -21,7 +21,7 @@ KittyReader::KittyReader(const std::string& dir) : _dir(dir), _currIdx(-1) {
         throw std::invalid_argument(msg);
     }
     std::vector<fs::path> files;
-    std::copy(fs::directory_iterator(fs::path(dir) / "training/flow_noc"), fs::directory_iterator(), back_inserter(files));
+    std::copy(fs::directory_iterator(fs::path(dir) / "training/flow_occ"), fs::directory_iterator(), back_inserter(files));
     _filesCount = files.size();
 }
 
@@ -31,11 +31,12 @@ size_t KittyReader::size() const {
 
 bool KittyReader::read_current(cv::Mat& prev, cv::Mat& next, cv::Mat& gt, cv::Mat& status) {
     char gtPath[512];
-    std::sprintf(gtPath, "%s/training/flow_noc/%06d_10.png", _dir.c_str(), _currIdx);
+    std::sprintf(gtPath, "%s/training/flow_occ/%06d_10.png", _dir.c_str(), _currIdx);
     if (!fs::exists(gtPath)) {
         return false;
     }
     std::tie(gt, status) = readKittiFlow(gtPath);
+    status.convertTo(status, CV_8UC1);
 
     char img[512];
     std::sprintf(img, "%s/training/image_2/%06d_10.png", _dir.c_str(), _currIdx);
