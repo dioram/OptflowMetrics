@@ -40,12 +40,16 @@ cv::Mat drawMotion(const cv::Mat& img, const cv::Mat& motion) {
     return res;
 }
 
-std::tuple<double, double, double> calcMetrics(const cv::Ptr<cv::dioram::DenseOpticalFlow>& optflow, const IReaderPtr& reader, std::function<void(int, float)> logger = NULL) {
+std::tuple<double, double, double> calcMetrics(const cv::Ptr<cv::dioram::DenseOpticalFlow>& optflow, const IReaderPtr& reader, bool convert2gray = false, std::function<void(int, float)> logger = NULL) {
     cv::Mat prev, next, gt, gt_status;
     std::vector<double> errs;
     double executionTime = 0;
     int iter = 0;
     while (reader->read_next(prev, next, gt, gt_status)) {
+        if (convert2gray) {
+            cv::cvtColor(prev, prev, cv::COLOR_BGR2GRAY);
+            cv::cvtColor(next, next, cv::COLOR_BGR2GRAY);
+        }
         cv::Mat flow, status;
         auto start = boost::chrono::high_resolution_clock::now();
         optflow->calc(prev, next, flow, status);
@@ -132,11 +136,11 @@ int main(int argc, char* argv[]) {
     cv::Mat prev, next, temp_gt, temp_status;
     reader->read_next(prev, next, temp_gt, temp_status);
     std::vector<std::tuple<const char*, cv::Ptr<cv::dioram::DenseOpticalFlow>>> opt_flows = {
-        std::make_tuple("raft", RaftOptFlow::create()),
+        //std::make_tuple("raft", RaftOptFlow::create()),
         //std::make_tuple("NvOptFlow_2.0", makeNvOptFlow_2_0(prev.cols, prev.rows)), ///only available since RTX 20xx
         //std::make_tuple("NVFlow_1.0", make_NVFlow(prev.cols, prev.rows)), ///only available since RTX 20xx
-        std::make_tuple("pyrLK", make_pyrLK()),
-        std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
+        //std::make_tuple("pyrLK", make_pyrLK()),
+        //std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
         std::make_tuple("denseRLOF", make_RLOF()),
         //std::make_tuple("ddflow", DDFlow::create()),
     };
@@ -163,6 +167,7 @@ int main(int argc, char* argv[]) {
             std::printf("\n");
             std::printf("mean: %.5f, std_dev: %.5f, exec_time: %.5f ms\n", mean, stdDev, executionTime);
             output << "mean: " << mean << " std_dev: " << stdDev << std::endl;
+            opt_flow->collectGarbage();
         }
         output.close();
     }

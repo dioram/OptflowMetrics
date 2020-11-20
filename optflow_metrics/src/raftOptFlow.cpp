@@ -6,6 +6,7 @@ class RaftOptFlowImpl : public RaftOptFlow
 {
 public:
     RaftOptFlowImpl();
+    CV_WRAP virtual void collectGarbage() override {}
     CV_WRAP virtual void calc(cv::InputArray I0, cv::InputArray I1, cv::InputOutputArray flow, cv::OutputArray statuses) override;
 
 private:
