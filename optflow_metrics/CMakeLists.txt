@@ -6,7 +6,8 @@ set(SOURCE_FILES
 	src/main.cpp
 	src/Adapters.hpp
 	src/NvOptFlow20.h src/NvOptFlow20.cpp
-	src/raftOptFlow.h src/raftOptFlow.cpp)
+	src/raftOptFlow.h src/raftOptFlow.cpp
+    src/DDFlow.h src/DDFlow.cpp)
 
 add_executable(${${PROJECT_NAME}_TARGET_NAME} ${SOURCE_FILES})
 target_include_directories(${${PROJECT_NAME}_TARGET_NAME}
@@ -45,3 +46,25 @@ if (MSVC)
                      ${CMAKE_CURRENT_SOURCE_DIR}/models
                      $<TARGET_FILE_DIR:${${PROJECT_NAME}_TARGET_NAME}>/models)
 endif (MSVC)
+
+find_package(TensorRT REQUIRED)
+target_link_libraries(${${PROJECT_NAME}_TARGET_NAME} PRIVATE ${TensorRT_LIBRARIES})
+target_include_directories(${${PROJECT_NAME}_TARGET_NAME} PRIVATE ${TensorRT_INCLUDE_DIR})
+#message(FATAL_ERROR "${TensorRT_LIBRARIES}")
+if (MSVC)
+  add_custom_command(TARGET ${${PROJECT_NAME}_TARGET_NAME}
+                     POST_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                     ${TensorRT_RUNTIME_LIBRARIES}
+                     $<TARGET_FILE_DIR:${${PROJECT_NAME}_TARGET_NAME}>)
+endif()
+
+include(${onnxruntime_ROOT}/onnxruntime.cmake)
+target_link_libraries(${${PROJECT_NAME}_TARGET_NAME} PRIVATE onnxruntime)
+if (MSVC)
+  add_custom_command(TARGET ${${PROJECT_NAME}_TARGET_NAME}
+                     POST_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                     $<TARGET_FILE:onnxruntime>
+                     $<TARGET_FILE_DIR:${${PROJECT_NAME}_TARGET_NAME}>)
+endif()

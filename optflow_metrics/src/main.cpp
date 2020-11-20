@@ -6,6 +6,7 @@
 #include "NvOptFlow20.h"
 #include <functional>
 #include "raftOptFlow.h"
+#include "DDFlow.h"
 
 float calcMetric(cv::Mat predicted, cv::Mat label) {
     cv::Mat diff = predicted - label;
@@ -101,6 +102,7 @@ cv::Ptr<cv::DenseOpticalFlow> makeNvOptFlow_2_0(int width, int height) {
 }
 
 int main(int argc, char* argv[]) {
+    auto ddflow = DDFlow::create();
     if (argc < 3) {
         std::cerr << "usage: <path_to_dataset> <kitti|sintel> If sintel, you must also provide subfolder "
                      "(i.e. market_2, alley_1, ambush_2 etc. And rendering type - 0 for albedo, 1 for clean or 2 for final"
