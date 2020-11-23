@@ -88,6 +88,7 @@ cv::Ptr<cv::dioram::DenseOpticalFlow> make_RLOF() {
     param->setUseIlluminationModel(true);
     param->setSolverType(cv::optflow::ST_BILINEAR);
     param->setNormSigma0(3.2);
+    param->setSupportRegionType(cv::optflow::SR_FIXED); //SR_FIXED for grayscale, SR_CROSS for rgb
     param->setNormSigma1(7.0);
     param->setMaxLevel(3);
     param->setMaxIteration(30);
@@ -159,7 +160,7 @@ int main(int argc, char* argv[]) {
             std::printf("Optical flow algorithm: %s\n", name);
             output << "Optical flow algorithm: " << name << std::endl;
             double mean, stdDev, executionTime;
-            std::tie(mean, stdDev, executionTime) = calcMetrics(opt_flow, reader, false,
+            std::tie(mean, stdDev, executionTime) = calcMetrics(opt_flow, reader, true,
                 [&reader](int i, float err) {
                     std::printf("\r[%05d / %05zu] epe: %10.5g", i + 1, reader->size(), err);
                 }
