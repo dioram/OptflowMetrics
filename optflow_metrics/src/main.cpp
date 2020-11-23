@@ -6,7 +6,7 @@
 #include "NvOptFlow20.h"
 #include <functional>
 #include "raftOptFlow.h"
-//#include "DDFlow.h"
+#include "DDFlow.h"
 #include <boost/chrono.hpp>
 
 float calcMetric(const cv::Mat& predicted, const cv::Mat& label, const cv::Mat& mask) {
@@ -57,9 +57,9 @@ std::tuple<double, double, double> calcMetrics(const cv::Ptr<cv::dioram::DenseOp
         if (iter > 1) { // skip a first execution because of there is some dilation in cuda implementations
             executionTime += (boost::chrono::duration_cast<boost::chrono::milliseconds>(stop - start)).count();
         }
-        /*cv::Mat temp = drawMotion(prev, flow);
-        cv::imshow("temp", temp);
-        cv::waitKey();*/
+        //cv::Mat temp = drawMotion(prev, flow);
+        //cv::imshow("temp", temp);
+        //cv::waitKey();
         cv::Mat mask; cv::bitwise_and(status, gt_status, mask);
         float err = calcMetric(flow, gt, mask);
         if (logger != NULL) {
@@ -141,8 +141,8 @@ int main(int argc, char* argv[]) {
         //std::make_tuple("NVFlow_1.0", make_NVFlow(prev.cols, prev.rows)), ///only available since RTX 20xx
         //std::make_tuple("pyrLK", make_pyrLK()),
         //std::make_tuple("cudaPyrLK", make_cudaPyrLK()),
-        std::make_tuple("denseRLOF", make_RLOF()),
-        //std::make_tuple("ddflow", DDFlow::create()),
+        //std::make_tuple("denseRLOF", make_RLOF()),
+        std::make_tuple("ddflow", DDFlow::create()),
     };
     reader->reset();
     {
