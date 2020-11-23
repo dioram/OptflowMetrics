@@ -7,3 +7,4 @@
 /.vs/**
 /.vscode
 /.vscode/**
+/optflow_metrics/models/ddflow.onnx
